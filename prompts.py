@@ -190,7 +190,6 @@ class PasswordPrompt(Prompt):
 
 def prompt_from_dict(p_dict):
     prompt_type = p_dict["type"]
-    
     if prompt_type == 1:
         # Text Prompt.
         prompt = TextPrompt(p_dict["question"])
