@@ -4,13 +4,10 @@ class Prompt:
 
     def __init__(self, question):
         self.question = question
+        self.type = 0
 
     def get_question(self):
         return self.question
-
-    def to_dict(self):
-        p_dict = {"type": 0, "question": self.question}
-        return p_dict
 
 
 class TextPrompt(Prompt):
@@ -20,10 +17,7 @@ class TextPrompt(Prompt):
 
     def __init__(self, question):
         super().__init__(question)
-
-    def to_dict(self):
-        p_dict = {"type": 1, "question": self.question}
-        return p_dict
+        self.type = 1
 
 
 class NumberPrompt(Prompt):
@@ -33,25 +27,24 @@ class NumberPrompt(Prompt):
 
     def __init__(self, question):
         super().__init__(question)
-        self.upper_bound = None
-        self.lower_bound = None
+        self.bounds = {"upper": None, "lower": None, "upper_inclusive": False, "lower_inclusive": False}
 
-        self.upper_bound_inclusive = False
-        self.lower_bound_inclusive = False
+        self.type = 2
+
         # An inclusive upper bound means acceptable values are <= the bound. Otherwise, strictly <.
         # An inclusive lower bound means acceptable values are >= the bound. Otherwise, strictly >.
 
     def set_upper_bound(self, num):
-        self.upper_bound = num
+        self.bounds["upper"] = num
 
     def set_lower_bound(self, num):
-        self.lower_bound = num
+        self.bounds["lower"] = num
 
     def set_upper_bound_inclusive(self, val):
-        self.upper_bound_inclusive = val
+        self.bounds["upper_inclusive"] = val
 
     def set_lower_bound_inclusive(self, val):
-        self.lower_bound_inclusive = val
+        self.bounds["lower_inclusive"] = val
 
     def validate(self, user_input):
         # If upper_bound is set, fails if input is greater or equal.
@@ -60,33 +53,23 @@ class NumberPrompt(Prompt):
         # If lower bound is inclusive, fails if input is exclusively lesser.
         user_num = int(user_input)
 
-        if self.upper_bound:
-            if self.upper_bound_inclusive:
-                if user_num > self.upper_bound:
+        if self.bounds["upper"]:
+            if self.bounds["upper_inclusive"]:
+                if user_num > self.bounds["upper"]:
                     return False
             else:
-                if user_num >= self.upper_bound:
+                if user_num >= self.bounds["upper"]:
                     return False
 
-        if self.lower_bound:
-            if self.lower_bound_inclusive:
-                if user_num < self.lower_bound:
+        if self.bounds["lower"]:
+            if self.bounds["lower_inclusive"]:
+                if user_num < self.bounds["lower"]:
                     return False
             else:
-                if user_num <= self.lower_bound:
+                if user_num <= self.bounds["lower"]:
                     return False
 
         return True
-
-    def to_dict(self):
-        p_dict = {"type": 2, "question": self.question, "bounds": {}}
-
-        p_dict["bounds"]["upper"] = self.upper_bound
-        p_dict["bounds"]["lower"] = self.lower_bound
-        p_dict["bounds"]["upper_inclusive"] = self.upper_bound_inclusive
-        p_dict["bounds"]["lower_inclusive"] = self.lower_bound_inclusive
-
-        return p_dict
 
 
 class MultiChoicePrompt(Prompt):
@@ -98,6 +81,7 @@ class MultiChoicePrompt(Prompt):
         self.options = []
         if options is not None:
             self.options = options
+        self.type = 3
 
     def add_option(self, opt):
         self.options.append(opt)
@@ -108,14 +92,6 @@ class MultiChoicePrompt(Prompt):
     def get_options(self):
         return self.options
 
-    def to_dict(self):
-        p_dict = super().to_dict()
-        p_dict["type"] = 3
-        p_dict["options"] = []
-        for opt in self.options:
-            p_dict["options"].append(opt)
-        return p_dict
-
 
 class EmailPrompt(Prompt):
     # The subclass for Email Validation Prompts.
@@ -123,44 +99,35 @@ class EmailPrompt(Prompt):
 
     def __init__(self, question):
         super().__init__(question)
-        self.allowed_domains = []
-        self.blocked_domains = []
+        self.domains = {"allowed": [], "blocked": []}
+        self.type = 4
 
     def add_allowed_domain(self, domain):
-        self.allowed_domains.append(domain)
+        self.domains["allowed"].append(domain)
 
     def add_blocked_domain(self, domain):
-        self.blocked_domains.append(domain)
+        self.domains["blocked"].append(domain)
 
     def remove_allowed_domain(self, domain):
-        self.allowed_domains.remove(domain)
+        self.domains["allowed"].remove(domain)
 
     def remove_blocked_domain(self, domain):
-        self.blocked_domains.remove(domain)
+        self.domains["blocked"].remove(domain)
 
     def validate(self, user_input):
         # If there are no entries in the whitelist or blacklist, this function always returns true.
         # Otherwise, will return FALSE if the provided domain is in the blacklist or not in the whitelist.
         # Returns TRUE if the provided domain is in the whitelist or not in the blacklist.
         domain = user_input.split("@")[1]
-        if self.allowed_domains:
+        if self.domains["allowed"]:
             # We are doing whitelist validation FIRST.
-            return domain in self.allowed_domains
+            return domain in self.domains["allowed"]
 
-        if self.blocked_domains:
+        if self.domains["blocked"]:
             # We are doing blacklist validation SECOND.
-            return domain not in self.blocked_domains
+            return domain not in self.domains["blocked"]
 
         return True
-
-    def to_dict(self):
-        p_dict = super().to_dict()
-        p_dict["type"] = 4
-        p_dict["domains"] = {}
-        p_dict["domains"]["allowed"] = self.allowed_domains
-        p_dict["domains"]["blocked"] = self.blocked_domains
-
-        return p_dict
 
 
 class PasswordPrompt(Prompt):
@@ -170,6 +137,7 @@ class PasswordPrompt(Prompt):
     def __init__(self, question):
         super().__init__(question)
         self.passwords = []
+        self.type = 5
 
     def add_password(self, pw):
         self.passwords.append(pw)
@@ -179,13 +147,6 @@ class PasswordPrompt(Prompt):
 
     def validate(self, user_input):
         return user_input in self.passwords
-
-    def to_dict(self):
-        p_dict = super().to_dict()
-        p_dict["type"] = 5
-        p_dict["passwords"] = self.passwords
-
-        return p_dict
 
 
 def prompt_from_dict(p_dict):
