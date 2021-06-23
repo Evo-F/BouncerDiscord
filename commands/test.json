@@ -1,0 +1,5 @@
+{
+        "name": "test",
+        "description": "Test command.",
+        "default_permission": false
+    }
